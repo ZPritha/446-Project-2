@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Identity & Access Registry</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#080F18;
+    --surface:#111D2B;
+    --surface-2:#16233370;
+    --surface-raised:#1B2A3B;
+    --border:#1E2E40;
+    --border-strong:#2C4058;
+    --text:#EDF3F9;
+    --text-dim:#93A7BC;
+    --text-faint:#546B81;
+    --accent:#4FD1C5;
+    --accent-soft:rgba(79,209,197,.13);
+    --accent-glow:rgba(79,209,197,.25);
+    --status-active:#34D399;      --status-active-bg:rgba(52,211,153,.12);
+    --status-suspended:#FBBF24;   --status-suspended-bg:rgba(251,191,36,.12);
+    --status-revoked:#F87171;     --status-revoked-bg:rgba(248,113,113,.12);
+    --radius:12px;
+    --font-mono:'IBM Plex Mono', ui-monospace, monospace;
+    --font-sans:'IBM Plex Sans', -apple-system, sans-serif;
+  }
+
+  *{box-sizing:border-box;}
+  html{-webkit-font-smoothing:antialiased;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(900px 500px at 12% -8%, rgba(79,209,197,.08), transparent 60%),
+      radial-gradient(700px 400px at 100% 0%, rgba(79,209,197,.04), transparent 55%),
+      repeating-linear-gradient(0deg, rgba(255,255,255,.014) 0 1px, transparent 1px 42px),
+      repeating-linear-gradient(90deg, rgba(255,255,255,.014) 0 1px, transparent 1px 42px),
+      var(--bg);
+    color:var(--text);
+    font-family:var(--font-sans);
+    line-height:1.5;
+    min-height:100vh;
+  }
+  a{color:var(--accent); text-decoration:none;}
+  a:hover{text-decoration:underline;}
+  :focus-visible{outline:2px solid var(--accent); outline-offset:2px; border-radius:4px;}
+
+  /* ================= HERO ================= */
+  header.hero{
+    padding:56px 24px 40px;
+    max-width:1160px;
+    margin:0 auto;
+    border-bottom:1px solid var(--border);
+  }
+  .eyebrow{
+    font-family:var(--font-mono);
+    font-size:11px;
+    letter-spacing:.16em;
+    text-transform:uppercase;
+    color:var(--accent);
+    margin:0 0 16px;
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    background:var(--accent-soft);
+    border:1px solid rgba(79,209,197,.3);
+    padding:5px 12px 5px 10px;
+    border-radius:999px;
+  }
+  .eyebrow::before{
+    content:'';
+    width:6px;height:6px;border-radius:50%;
+    background:var(--accent);
+    box-shadow:0 0 0 3px var(--accent-glow);
+  }
+  h1{
+    margin:0 0 10px;
+    font-size:clamp(30px,4.4vw,44px);
+    font-weight:700;
+    letter-spacing:-0.015em;
+    max-width:16ch;
+  }
+  .hero-sub{
+    margin:0 0 28px;
+    color:var(--text-dim);
+    font-size:15px;
+    max-width:52ch;
+  }
+  .hero-meta{
+    font-family:var(--font-mono);
+    font-size:12px;
+    color:var(--text-faint);
+  }
+  .hero-meta b{color:var(--text-dim); font-weight:500;}
+
+  /* stat strip */
+  .stat-strip{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    margin-top:28px;
+  }
+  .stat-chip{
+    display:flex;
+    align-items:baseline;
+    gap:8px;
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:12px 16px;
+    min-width:104px;
+    animation:rise .3s ease both;
+  }
+  .stat-chip .n{
+    font-family:var(--font-mono);
+    font-size:22px;
+    font-weight:600;
+    color:var(--text);
+  }
+  .stat-chip .l{
+    font-size:11px;
+    color:var(--text-faint);
+    text-transform:uppercase;
+    letter-spacing:.06em;
+  }
+  .stat-chip.active .n{color:var(--status-active);}
+  .stat-chip.suspended .n{color:var(--status-suspended);}
+  .stat-chip.revoked .n{color:var(--status-revoked);}
+
+  /* ================= MAIN ================= */
+  main{max-width:1160px; margin:0 auto; padding:36px 24px 72px;}
+  section{margin-bottom:44px;}
+  .section-title{
+    font-family:var(--font-mono);
+    font-size:12px;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+    color:var(--text-faint);
+    margin:0 0 16px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+  }
+
+  /* ---------- toolbar ---------- */
+  .toolbar{display:flex; flex-wrap:wrap; gap:10px;}
+  .filter-group{
+    display:flex; align-items:center; gap:2px;
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:999px;
+    padding:4px 4px 4px 12px;
+    transition:border-color .15s ease;
+  }
+  .filter-group:focus-within{border-color:var(--accent-glow);}
+  .filter-group svg{flex:none; opacity:.5;}
+  .filter-group label{font-size:11px; color:var(--text-faint); white-space:nowrap; margin-right:2px;}
+  .filter-group input, .filter-group select{
+    background:transparent; border:none; color:var(--text);
+    font-family:var(--font-mono); font-size:13px; padding:7px 4px; width:104px; outline:none;
+  }
+  .filter-group select{width:auto;}
+  .filter-group input::placeholder{color:var(--text-faint);}
+
+  .btn{
+    font-family:var(--font-sans); font-size:13px; font-weight:600;
+    border-radius:999px; border:1px solid var(--border-strong);
+    background:var(--surface-raised); color:var(--text);
+    padding:9px 18px; cursor:pointer; display:inline-flex; align-items:center; gap:7px;
+    transition:background .15s ease, border-color .15s ease, transform .1s ease, box-shadow .15s ease;
+  }
+  .btn:hover{border-color:var(--accent); background:#1D2E42;}
+  .btn:active{transform:translateY(1px);}
+  .btn-ghost{background:transparent; border:1px solid var(--border); padding:6px 14px; font-size:12px;}
+  .btn-primary{background:var(--accent); color:#04211D; border-color:var(--accent);}
+  .btn-primary:hover{background:#6EDCD1; box-shadow:0 0 0 4px var(--accent-glow);}
+  .btn-block{width:100%; justify-content:center; margin-top:8px;}
+
+  /* ---------- badge grid ---------- */
+  .badge-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(252px,1fr)); gap:14px; margin-top:18px;}
+
+  .badge-card{
+    position:relative;
+    background:linear-gradient(180deg, var(--surface-raised), var(--surface));
+    border:1px solid var(--border);
+    border-top:3px solid var(--stripe, var(--text-faint));
+    border-radius:var(--radius);
+    padding:16px 16px 14px;
+    animation:rise .3s ease both;
+    transition:transform .15s ease, border-color .15s ease, box-shadow .15s ease;
+  }
+  .badge-card:hover{transform:translateY(-2px); box-shadow:0 8px 24px rgba(0,0,0,.35);}
+  @keyframes rise{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);}}
+  .badge-grid .badge-card:nth-child(1){animation-delay:.02s;}
+  .badge-grid .badge-card:nth-child(2){animation-delay:.05s;}
+  .badge-grid .badge-card:nth-child(3){animation-delay:.08s;}
+  .badge-grid .badge-card:nth-child(4){animation-delay:.11s;}
+  .badge-grid .badge-card:nth-child(5){animation-delay:.14s;}
+  .badge-grid .badge-card:nth-child(n+6){animation-delay:.16s;}
+
+  .badge-top{display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;}
+  .chip{
+    width:32px; height:22px; border-radius:4px;
+    background:linear-gradient(135deg,#33465A,#1E2C3B);
+    border:1px solid var(--border-strong);
+    position:relative;
+  }
+  .chip::before{
+    content:''; position:absolute; inset:4px 5px; border-radius:2px;
+    background:repeating-linear-gradient(90deg, rgba(79,209,197,.4) 0 2px, transparent 2px 6px);
+  }
+  .status-pill{
+    display:inline-flex; align-items:center; gap:5px;
+    font-family:var(--font-mono); font-size:10.5px; font-weight:600;
+    letter-spacing:.03em; text-transform:uppercase;
+    padding:3px 9px; border-radius:999px;
+    background:var(--pill-bg, var(--surface-raised));
+    color:var(--pill-color, var(--text-dim));
+  }
+  .status-pill::before{content:''; width:6px; height:6px; border-radius:50%; background:currentColor;}
+
+  .badge-identity{display:flex; gap:11px; align-items:flex-start; margin-bottom:14px;}
+  .avatar{
+    flex:none; width:36px; height:36px; border-radius:9px;
+    display:flex; align-items:center; justify-content:center;
+    font-family:var(--font-mono); font-weight:600; font-size:13px;
+    background:var(--pill-bg, var(--surface-raised)); color:var(--pill-color, var(--text-dim));
+  }
+  .badge-name{font-size:14.5px; font-weight:600; color:var(--text); margin:0 0 2px;}
+  .badge-role{font-size:12px; color:var(--text-dim); margin:0;}
+
+  .badge-foot{
+    display:flex; justify-content:space-between; align-items:center;
+    border-top:1px solid var(--border); padding-top:10px;
+  }
+  .badge-key{font-family:var(--font-mono); font-size:12px; color:var(--text-faint); letter-spacing:.02em;}
+
+  .badge-card[data-status="Active"]{--stripe:var(--status-active);}
+  .badge-card[data-status="Suspended"]{--stripe:var(--status-suspended);}
+  .badge-card[data-status="Revoked"]{--stripe:var(--status-revoked);}
+
+  /* skeleton loading */
+  .skeleton{
+    background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+    height:128px; overflow:hidden; position:relative;
+  }
+  .skeleton::after{
+    content:''; position:absolute; inset:0;
+    background:linear-gradient(90deg, transparent, rgba(255,255,255,.045), transparent);
+    animation:shimmer 1.3s infinite;
+  }
+  @keyframes shimmer{from{transform:translateX(-100%);} to{transform:translateX(100%);}}
+
+  /* empty state */
+  .empty-state{
+    grid-column:1/-1;
+    border:1px dashed var(--border-strong); border-radius:var(--radius);
+    padding:36px 20px; text-align:center; color:var(--text-dim); font-size:14px; margin-top:4px;
+  }
+  .empty-state strong{display:block; color:var(--text); margin-bottom:4px; font-size:15px;}
+
+  /* ---------- action panels ---------- */
+  .panels{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
+  .panel{background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:22px;}
+  .panel-head{display:flex; align-items:center; gap:10px; margin-bottom:4px;}
+  .panel-icon{
+    width:28px; height:28px; border-radius:8px; flex:none;
+    background:var(--accent-soft); color:var(--accent);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .panel h3{margin:0; font-size:15px;}
+  .panel p.hint{margin:2px 0 18px 38px; font-size:12px; color:var(--text-faint);}
+  .field{margin-bottom:12px;}
+  .field label{display:block; font-size:12px; color:var(--text-dim); margin-bottom:5px;}
+  .field input, .field select{
+    width:100%; background:#0D1826; border:1px solid var(--border); border-radius:7px;
+    color:var(--text); font-family:var(--font-sans); font-size:14px; padding:10px 12px;
+    outline:none; transition:border-color .15s ease, box-shadow .15s ease;
+  }
+  .field input:focus, .field select:focus{border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft);}
+
+  @media (max-width:760px){
+    .panels{grid-template-columns:1fr;}
+    .filter-group{width:100%;}
+    .filter-group input{width:100%;}
+  }
+
+  /* ---------- toast ---------- */
+  #toast{
+    position:fixed; bottom:22px; left:50%; transform:translateX(-50%) translateY(20px);
+    background:var(--surface-raised); border:1px solid var(--border-strong); color:var(--text);
+    font-size:13px; padding:11px 20px; border-radius:8px;
+    opacity:0; pointer-events:none; transition:opacity .2s ease, transform .2s ease; z-index:50;
+    box-shadow:0 10px 30px rgba(0,0,0,.4);
+  }
+  #toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+  #toast.error{border-color:var(--status-revoked); color:var(--status-revoked);}
+  #toast.success{border-color:var(--status-active); color:var(--status-active);}
+
+  @media (prefers-reduced-motion:reduce){ *{animation:none !important; transition:none !important;} }
+</style>
+</head>
+<body>
+
+  <header class="hero">
+    <span class="eyebrow">Ledger-backed · Hyperledger Fabric</span>
+    <h1>Identity &amp; Access Registry</h1>
+    <p class="hero-sub">Internal HR &amp; Security Portal — issue, audit, and revoke employee access on a tamper-proof ledger.</p>
+    <p class="hero-meta">channel: <b>mychannel</b> &nbsp;·&nbsp; chaincode: <b>fabcar</b> &nbsp;·&nbsp; state db: <b>couchdb</b></p>
+
+    <div class="stat-strip" id="stat-strip"></div>
+  </header>
+
+  <main>
+
+    <section aria-labelledby="registry-heading">
+      <p class="section-title" id="registry-heading">Registry</p>
+
+      <div class="toolbar">
+        <button class="btn btn-primary" onclick="getAll()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M21 12a9 9 0 1 1-2.6-6.4M21 4v6h-6"/></svg>
+          Get all identities
+        </button>
+
+        <div class="filter-group">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+          <label for="search-id">ID</label>
+          <input id="search-id" type="text" placeholder="EMP001">
+          <button class="btn btn-ghost" onclick="searchById()">Search</button>
+        </div>
+
+        <div class="filter-group">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+          <label for="search-department">Dept</label>
+          <input id="search-department" type="text" placeholder="IT">
+          <button class="btn btn-ghost" onclick="searchByDepartment()">Search</button>
+        </div>
+
+        <div class="filter-group">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+          <label for="search-status">Status</label>
+          <select id="search-status">
+            <option value="">Any</option>
+            <option value="Active">Active</option>
+            <option value="Suspended">Suspended</option>
+            <option value="Revoked">Revoked</option>
+          </select>
+          <button class="btn btn-ghost" onclick="searchByStatus()">Search</button>
+        </div>
+      </div>
+
+      <div id="show-identity" class="badge-grid"></div>
+    </section>
+
+    <section aria-labelledby="actions-heading">
+      <p class="section-title" id="actions-heading">Registry actions</p>
+      <div class="panels">
+
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-icon">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>
+            </span>
+            <h3>Issue new identity</h3>
+          </div>
+          <p class="hint">Writes a new record to the ledger.</p>
+          <form id="createForm" name="createIdentity">
+            <div class="field">
+              <label for="c-id">Employee ID</label>
+              <input id="c-id" name="id" placeholder="EMP010" required />
+            </div>
+            <div class="field">
+              <label for="c-department">Department</label>
+              <input id="c-department" name="department" placeholder="IT / HR / Finance" required />
+            </div>
+            <div class="field">
+              <label for="c-role">Role</label>
+              <input id="c-role" name="role" placeholder="Developer / Manager / ..." required />
+            </div>
+            <div class="field">
+              <label for="c-name">Employee name</label>
+              <input id="c-name" name="employee_name" required />
+            </div>
+            <div class="field">
+              <label for="c-status">Clearance status</label>
+              <select id="c-status" name="clearance_status">
+                <option value="Active">Active</option>
+                <option value="Suspended">Suspended</option>
+                <option value="Revoked">Revoked</option>
+              </select>
+            </div>
+            <button type="submit" class="btn btn-primary btn-block">Issue identity</button>
+          </form>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-icon">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M21 12a9 9 0 1 1-2.6-6.4M21 4v6h-6"/></svg>
+            </span>
+            <h3>Update clearance status</h3>
+          </div>
+          <p class="hint">Overwrites clearance_status on an existing record.</p>
+          <form id="updateForm" name="updateClearance">
+            <div class="field">
+              <label for="u-id">Employee ID</label>
+              <input id="u-id" name="id" placeholder="EMP001" required />
+            </div>
+            <div class="field">
+              <label for="u-status">New clearance status</label>
+              <select id="u-status" name="clearance_status">
+                <option value="Active">Active</option>
+                <option value="Suspended">Suspended</option>
+                <option value="Revoked">Revoked</option>
+              </select>
+            </div>
+            <button type="submit" class="btn btn-primary btn-block">Update status</button>
+          </form>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <div id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+
+    const STATUS_COLOR = {
+        Active:   { bg: 'var(--status-active-bg)',    color: 'var(--status-active)' },
+        Suspended:{ bg: 'var(--status-suspended-bg)', color: 'var(--status-suspended)' },
+        Revoked:  { bg: 'var(--status-revoked-bg)',   color: 'var(--status-revoked)' },
+    }
+
+    function showToast(message, type){
+        const toast = document.getElementById('toast')
+        toast.textContent = message
+        toast.className = 'show' + (type ? ' ' + type : '')
+        clearTimeout(showToast._t)
+        showToast._t = setTimeout(() => { toast.className = '' }, 3000)
+    }
+
+    function initials(name){
+        if (!name) return '?'
+        return name.trim().split(/\s+/).slice(0,2).map(w => w[0].toUpperCase()).join('')
+    }
+
+    // ISSUING NEW IDENTITY
+    const createForm = document.getElementById('createForm')
+    createForm.addEventListener("submit", function(event) {
+        event.preventDefault()
+        const bodyParam = new URLSearchParams( new FormData(createForm) )
+        fetch('http://localhost:3000/create', { method: 'POST', body: bodyParam })
+            .then(res => res.json())
+            .then( parsedRes => {
+                showToast(parsedRes.message, 'success')
+                createForm.reset()
+                getAll()
+            })
+            .catch(err => { showToast('Failed to issue identity', 'error'); console.error({ err }) })
+    });
+
+    // UPDATE: CHANGING CLEARANCE STATUS
+    const updateForm = document.getElementById('updateForm')
+    updateForm.addEventListener("submit", function(event) {
+        event.preventDefault()
+        const bodyParam = new URLSearchParams( new FormData(updateForm) )
+        fetch('http://localhost:3000/update', { method: 'POST', body: bodyParam })
+            .then(res => { if(res.status !== 200){ showToast('Unable to update', 'error'); return } return res.json() })
+            .then( parsedRes => {
+                if (!parsedRes) return
+                showToast(parsedRes.message, 'success')
+                updateForm.reset()
+                getAll()
+            })
+            .catch(err => { showToast(err.message, 'error'); console.error({ err }) })
+    });
+
+    function searchById(){
+        const value = document.getElementById('search-id').value
+        fetchIdentities( value ? { id: value } : {} )
+    }
+    function searchByDepartment(){
+        const value = document.getElementById('search-department').value
+        fetchIdentities( value ? { department: value } : {} )
+    }
+    function searchByStatus(){
+        const value = document.getElementById('search-status').value
+        fetchIdentities( value ? { status: value } : {} )
+    }
+    function getAll(){
+        fetchIdentities({})
+    }
+
+    function renderSkeleton(){
+        const container = document.getElementById('show-identity')
+        container.innerHTML = Array.from({length:4}).map(() => '<div class="skeleton"></div>').join('')
+    }
+
+    function renderStats(records){
+        const strip = document.getElementById('stat-strip')
+        const counts = { Active:0, Suspended:0, Revoked:0 }
+        records.forEach(r => { const s = r.Record.clearance_status; if (counts[s] !== undefined) counts[s]++ })
+        strip.innerHTML = `
+            <div class="stat-chip"><span class="n">${records.length}</span><span class="l">Showing</span></div>
+            <div class="stat-chip active"><span class="n">${counts.Active}</span><span class="l">Active</span></div>
+            <div class="stat-chip suspended"><span class="n">${counts.Suspended}</span><span class="l">Suspended</span></div>
+            <div class="stat-chip revoked"><span class="n">${counts.Revoked}</span><span class="l">Revoked</span></div>
+        `
+    }
+
+    function fetchIdentities( queryParams ){
+        const search = new URLSearchParams(queryParams).toString()
+        const api = 'http://localhost:3000/get-identity' + ( search ? '?' + search : '' )
+        const container = document.getElementById('show-identity')
+
+        renderSkeleton()
+
+        fetch(api)
+            .then( res => res.json() )
+            .then( parsedRes => {
+                container.innerHTML = ''
+                renderStats(parsedRes || [])
+
+                if (!parsedRes || parsedRes.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <strong>No matching identities</strong>
+                            No records on the ledger match this filter. Try a different search, or
+                            <a href="#" onclick="getAll(); return false;">view all identities</a>.
+                        </div>`
+                    return
+                }
+
+                parsedRes.forEach( item => {
+                    const status = item.Record.clearance_status || 'Active'
+                    const colors = STATUS_COLOR[status] || STATUS_COLOR.Active
+                    const card = document.createElement('div')
+                    card.className = 'badge-card'
+                    card.setAttribute('data-status', status)
+                    card.innerHTML = `
+                        <div class="badge-top">
+                            <div class="chip"></div>
+                            <span class="status-pill" style="--pill-bg:${colors.bg}; --pill-color:${colors.color}">${ status }</span>
+                        </div>
+                        <div class="badge-identity">
+                            <div class="avatar" style="--pill-bg:${colors.bg}; --pill-color:${colors.color}">${ initials(item.Record.employee_name) }</div>
+                            <div>
+                                <p class="badge-name">${ item.Record.employee_name || '—' }</p>
+                                <p class="badge-role">${ item.Record.department || '—' } · ${ item.Record.role || '—' }</p>
+                            </div>
+                        </div>
+                        <div class="badge-foot">
+                            <span class="badge-key">${ item.Key }</span>
+                        </div>
+                    `
+                    container.appendChild(card)
+                })
+            })
+            .catch(err => {
+                container.innerHTML = ''
+                showToast('Could not reach the API server', 'error')
+                console.error({ err })
+            })
+    }
+
+    // initial load
+    getAll()
+
+  </script>
+</body>
+</html>
